@@ -230,10 +230,10 @@ public class Machine {
     }
 
     private boolean executeBranch(Command command) {
-        /*if (command.getFirstCommandNumber() >= tape.length * BITS_PER_WORD || command.getFirstCommandNumber() < 1
-                || command.getSecondCommandNumber() >= tape.length * BITS_PER_WORD || command.getSecondCommandNumber() < 1) {
+        if (command.getFirstCommandNumber() > commands.length|| command.getFirstCommandNumber() < 1
+                || command.getSecondCommandNumber() > commands.length || command.getSecondCommandNumber() < 1) {
             return false;
-        }*/
+        }
         if (currentCarriageNumber % BITS_PER_WORD == 0) {
             int wordIndex = wordIndex(currentCarriageNumber);
             if (tape[wordIndex] < 0) {
