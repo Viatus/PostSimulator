@@ -67,6 +67,16 @@ public class Command {
     }
 
     @Override
+    public boolean equals(Object other) {
+        if (other.getClass() != this.getClass()) {
+            return false;
+        }
+        Command otherCommand = (Command) other;
+        return this.commandName == otherCommand.commandName && this.firstCommandNumber == otherCommand.firstCommandNumber
+                && this.secondCommandNumber == otherCommand.secondCommandNumber;
+    }
+
+    @Override
     public String toString() {
         return commandName.toString() + (firstCommandNumber != 0? firstCommandNumber:"") + (secondCommandNumber != 0? ";" + secondCommandNumber:"");
     }
