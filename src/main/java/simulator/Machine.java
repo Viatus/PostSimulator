@@ -2,22 +2,21 @@ package simulator;
 
 public class Machine {
 
-    private final static int ADDRESS_BITS_PER_WORD = 6;
-    private final static int BITS_PER_WORD = 1 << ADDRESS_BITS_PER_WORD;
+    private final static int BITS_PER_WORD = 8;
 
     private Command[] commands;
 
-    private long[] tape;
+    private byte[] tape;
 
     private int currentCommandNumber;
     private int currentCarriageNumber;
 
-    public long[] getTape() {
+    public byte[] getTape() {
         return tape;
     }
 
     public Machine() {
-        tape = new long[1];
+        tape = new byte[2];
         currentCarriageNumber = 9;
     }
 
@@ -85,16 +84,53 @@ public class Machine {
         return parsedCommands;
     }
 
-    public void setProgramm(String[] listOfCommands) {
+    public void setProgram(String[] listOfCommands) {
         commands = parseCommandsList(listOfCommands);
         currentCommandNumber = 0;
     }
 
+    public void setTape(byte[] tape, int carriageNumber) {
+        this.tape = tape;
+        currentCarriageNumber = carriageNumber;
+    }
+
+    public boolean setTape(String tape, int currentCarriageNumber) {
+        this.tape = new byte[wordIndex(tape.length() - 1) + 1];
+        int index = 7;
+        int tapeIndex = 0;
+        char sign = '0';
+        for (int i = 0; i < tape.length(); i++) {
+            char digit = tape.charAt(i);
+            if (digit != '0' && digit != '1') {
+                return false;
+            }
+            if (index == 7) {
+                sign = digit;
+            } else {
+                if (digit == '1') {
+                    this.tape[tapeIndex] += Math.pow(2, index);
+                }
+            }
+            if (index == 0) {
+                if (sign == '1') {
+                    this.tape[tapeIndex] = (byte) -this.tape[tapeIndex];
+                }
+                index = 7;
+                tapeIndex++;
+            } else {
+                index--;
+            }
+        }
+        this.currentCarriageNumber = currentCarriageNumber;
+        return true;
+    }
+
     private static int wordIndex(int bitIndex) {
-        return bitIndex >> ADDRESS_BITS_PER_WORD;
+        return bitIndex / BITS_PER_WORD;
     }
 
     public boolean executeProgram() {
+        currentCommandNumber = 0;
         while (commands[currentCommandNumber].getCommandName() != Command.CommandName.stop) {
             if (!executeStep()) {
                 return false;
@@ -104,63 +140,137 @@ public class Machine {
     }
 
     public boolean executeStep() {
-        return true;
+        Command command = commands[currentCommandNumber];
+        switch (command.getCommandName()) {
+            case mark:
+                return executeMark(command);
+            case unmark:
+                return executeUnMark(command);
+            case left:
+                return executeLeft(command);
+            case right:
+                return executeRight(command);
+            case branch:
+                return executeBranch(command);
+            default:
+                return false;
+        }
     }
 
     private boolean executeMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
-        tape[wordIndex] |= (1L << currentCarriageNumber);
-        currentCommandNumber = command.getFirstCommandNumber();
+        if (currentCarriageNumber % BITS_PER_WORD == 0) {
+            if (tape[wordIndex] < 0) {
+                return false;
+            } else {
+                tape[wordIndex] = (byte) -tape[wordIndex];
+            }
+        } else {
+            if (tape[wordIndex] < 0) {
+                tape[wordIndex] = (byte) Math.abs(tape[wordIndex]);
+                tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
+                tape[wordIndex] = (byte) -tape[wordIndex];
+            } else {
+                tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
+            }
+        }
+        currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
 
     private boolean executeUnMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
-        tape[wordIndex] &= ~(1L << currentCarriageNumber);
-        currentCommandNumber = command.getFirstCommandNumber();
+        if (currentCarriageNumber % BITS_PER_WORD == 0) {
+            if (tape[wordIndex] >= 0) {
+                return false;
+            } else {
+                tape[wordIndex] = (byte) -tape[wordIndex];
+            }
+        } else {
+            if (tape[wordIndex] < 0) {
+                tape[wordIndex] = (byte) Math.abs(tape[wordIndex]);
+                tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
+                tape[wordIndex] = (byte) -tape[wordIndex];
+            } else {
+                tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
+            }
+        }
+        currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
 
     private boolean executeLeft(Command command) {
         if (currentCarriageNumber == 0) {
-            long[] tapeCopy = tape;
-            tape = new long[tape.length * 2];
+            byte[] tapeCopy = tape;
+            tape = new byte[tape.length * 2];
             int i = tapeCopy.length;
-            for (long word : tapeCopy) {
+            for (byte word : tapeCopy) {
                 tape[i++] = word;
             }
+            currentCarriageNumber = tapeCopy.length - 1;
+        } else {
+            currentCarriageNumber--;
         }
-        currentCarriageNumber--;
-        currentCommandNumber = command.getFirstCommandNumber();
+        currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
 
     private boolean executeRight(Command command) {
-        if (currentCarriageNumber == tape.length) {
-            long[] tapeCopy = tape;
-            tape = new long[tape.length * 2];
+        if (currentCarriageNumber + 1 == tape.length * BITS_PER_WORD) {
+            byte[] tapeCopy = tape;
+            tape = new byte[tape.length * 2];
             int i = 0;
-            for (long word : tapeCopy) {
+            for (byte word : tapeCopy) {
                 tape[i++] = word;
             }
         }
-        currentCarriageNumber--;
-        currentCommandNumber = command.getFirstCommandNumber();
+        currentCarriageNumber++;
+        currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
 
     private boolean executeBranch(Command command) {
-        if (command.getFirstCommandNumber() > tape.length<<ADDRESS_BITS_PER_WORD || command.getFirstCommandNumber() < 1
-                || command.getSecondCommandNumber() > tape.length<<ADDRESS_BITS_PER_WORD || command.getSecondCommandNumber() < 1) {
+        /*if (command.getFirstCommandNumber() >= tape.length * BITS_PER_WORD || command.getFirstCommandNumber() < 1
+                || command.getSecondCommandNumber() >= tape.length * BITS_PER_WORD || command.getSecondCommandNumber() < 1) {
             return false;
-        }
-        long word = tape[wordIndex(currentCarriageNumber)] & (1L << currentCarriageNumber);
-        if (word == 0) {
-            currentCommandNumber = command.getSecondCommandNumber();
+        }*/
+        if (currentCarriageNumber % BITS_PER_WORD == 0) {
+            int wordIndex = wordIndex(currentCarriageNumber);
+            if (tape[wordIndex] < 0) {
+                currentCommandNumber = command.getSecondCommandNumber() - 1;
+            } else {
+                currentCommandNumber = command.getFirstCommandNumber() - 1;
+            }
         } else {
-            currentCommandNumber = command.getFirstCommandNumber();
+            byte word = (byte) (Math.abs(tape[wordIndex(currentCarriageNumber)]) & (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD));
+            if (word == 0) {
+                currentCommandNumber = command.getFirstCommandNumber() - 1;
+            } else {
+                currentCommandNumber = command.getSecondCommandNumber() - 1;
+            }
         }
         return true;
+    }
+
+    public String byteToBinaryString(byte[] tapeToConvert) {
+        StringBuilder result = new StringBuilder();
+        for (byte word : tapeToConvert) {
+            StringBuilder temp = new StringBuilder();
+            StringBuilder sign = new StringBuilder(word >= 0 ? "0" : "1");
+            word = (byte) Math.abs(word);
+            while (word > 1) {
+                temp.append(word % 2);
+                word /= 2;
+            }
+            temp.append(word);
+            int zerosLeft = BITS_PER_WORD - 1 - temp.length();
+            for (int i = 0; i < zerosLeft; i++) {
+                temp.append("0");
+            }
+            temp.append(sign);
+            result.append(temp.reverse());
+        }
+        return result.toString();
     }
 
 
@@ -171,6 +281,16 @@ public class Machine {
         for (Command command : testres) {
             System.out.println(command);
         }
+        machine.setProgram(test);
+        byte[] testTape = {-0b1111011};
+        machine.setTape(testTape, 6);
+        System.out.println(machine.byteToBinaryString(machine.getTape()));
+        System.out.println(machine.executeProgram());
+        System.out.println(machine.byteToBinaryString(machine.getTape()));
 
+        System.out.println(machine.setTape("0000000011111011", 14));
+        System.out.println(machine.byteToBinaryString(machine.getTape()));
+        System.out.println(machine.executeProgram());
+        System.out.println(machine.byteToBinaryString(machine.getTape()));
     }
 }
