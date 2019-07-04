@@ -2,7 +2,7 @@ package simulator;
 
 public class Machine {
 
-    private final static int BITS_PER_WORD = 8;
+    private final static int BITS_PER_WORD = 7;
 
     private Command[] commands;
 
@@ -96,26 +96,18 @@ public class Machine {
 
     public boolean setTape(String tape, int currentCarriageNumber) {
         this.tape = new byte[wordIndex(tape.length() - 1) + 1];
-        int index = 7;
+        int index = 6;
         int tapeIndex = 0;
-        char sign = '0';
         for (int i = 0; i < tape.length(); i++) {
             char digit = tape.charAt(i);
             if (digit != '0' && digit != '1') {
                 return false;
             }
-            if (index == 7) {
-                sign = digit;
-            } else {
-                if (digit == '1') {
-                    this.tape[tapeIndex] += Math.pow(2, index);
-                }
+            if (digit == '1') {
+                this.tape[tapeIndex] += Math.pow(2, index);
             }
             if (index == 0) {
-                if (sign == '1') {
-                    this.tape[tapeIndex] = (byte) -this.tape[tapeIndex];
-                }
-                index = 7;
+                index = 6;
                 tapeIndex++;
             } else {
                 index--;
@@ -141,6 +133,7 @@ public class Machine {
 
     public boolean executeStep() {
         Command command = commands[currentCommandNumber];
+        //System.out.println(command + "    " + byteToBinaryString(tape));
         switch (command.getCommandName()) {
             case mark:
                 return executeMark(command);
@@ -159,42 +152,14 @@ public class Machine {
 
     private boolean executeMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
-        if (currentCarriageNumber % BITS_PER_WORD == 0) {
-            if (tape[wordIndex] < 0) {
-                return false;
-            } else {
-                tape[wordIndex] = (byte) -tape[wordIndex];
-            }
-        } else {
-            if (tape[wordIndex] < 0) {
-                tape[wordIndex] = (byte) Math.abs(tape[wordIndex]);
-                tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
-                tape[wordIndex] = (byte) -tape[wordIndex];
-            } else {
-                tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
-            }
-        }
+        tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
         currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
 
     private boolean executeUnMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
-        if (currentCarriageNumber % BITS_PER_WORD == 0) {
-            if (tape[wordIndex] >= 0) {
-                return false;
-            } else {
-                tape[wordIndex] = (byte) -tape[wordIndex];
-            }
-        } else {
-            if (tape[wordIndex] < 0) {
-                tape[wordIndex] = (byte) Math.abs(tape[wordIndex]);
-                tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
-                tape[wordIndex] = (byte) -tape[wordIndex];
-            } else {
-                tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
-            }
-        }
+        tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
         currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
     }
@@ -230,24 +195,15 @@ public class Machine {
     }
 
     private boolean executeBranch(Command command) {
-        if (command.getFirstCommandNumber() > commands.length|| command.getFirstCommandNumber() < 1
+        if (command.getFirstCommandNumber() > commands.length || command.getFirstCommandNumber() < 1
                 || command.getSecondCommandNumber() > commands.length || command.getSecondCommandNumber() < 1) {
             return false;
         }
-        if (currentCarriageNumber % BITS_PER_WORD == 0) {
-            int wordIndex = wordIndex(currentCarriageNumber);
-            if (tape[wordIndex] < 0) {
-                currentCommandNumber = command.getSecondCommandNumber() - 1;
-            } else {
-                currentCommandNumber = command.getFirstCommandNumber() - 1;
-            }
+        byte word = (byte) (tape[wordIndex(currentCarriageNumber)] & (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD));
+        if (word == 0) {
+            currentCommandNumber = command.getFirstCommandNumber() - 1;
         } else {
-            byte word = (byte) (Math.abs(tape[wordIndex(currentCarriageNumber)]) & (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD));
-            if (word == 0) {
-                currentCommandNumber = command.getFirstCommandNumber() - 1;
-            } else {
-                currentCommandNumber = command.getSecondCommandNumber() - 1;
-            }
+            currentCommandNumber = command.getSecondCommandNumber() - 1;
         }
         return true;
     }
@@ -256,18 +212,16 @@ public class Machine {
         StringBuilder result = new StringBuilder();
         for (byte word : tapeToConvert) {
             StringBuilder temp = new StringBuilder();
-            StringBuilder sign = new StringBuilder(word >= 0 ? "0" : "1");
             word = (byte) Math.abs(word);
             while (word > 1) {
                 temp.append(word % 2);
                 word /= 2;
             }
             temp.append(word);
-            int zerosLeft = BITS_PER_WORD - 1 - temp.length();
+            int zerosLeft = BITS_PER_WORD - temp.length();
             for (int i = 0; i < zerosLeft; i++) {
                 temp.append("0");
             }
-            temp.append(sign);
             result.append(temp.reverse());
         }
         return result.toString();
@@ -275,22 +229,18 @@ public class Machine {
 
 
     public static void main(String[] args) {
-        String[] test = {"1.l", "2.b1;3", "3.u", "4.r", "5.b4;6", "6.u", "7.r", "8.b9;1", "9.s"};
+        String[] test = {"1.u", "2.r", "3.b4;2", "4.m", "5.r", "6.b10;7", "7.l", "8.b9;7", "9.r1", "10.s"};
         Machine machine = new Machine();
         Command[] testres = machine.parseCommandsList(test);
         for (Command command : testres) {
             System.out.println(command);
         }
         machine.setProgram(test);
-        byte[] testTape = {-0b1111011};
-        machine.setTape(testTape, 6);
+        byte[] testTape = {0b1010101};
+        machine.setTape(testTape, 0);
         System.out.println(machine.byteToBinaryString(machine.getTape()));
         System.out.println(machine.executeProgram());
         System.out.println(machine.byteToBinaryString(machine.getTape()));
 
-        System.out.println(machine.setTape("0000000011111011", 14));
-        System.out.println(machine.byteToBinaryString(machine.getTape()));
-        System.out.println(machine.executeProgram());
-        System.out.println(machine.byteToBinaryString(machine.getTape()));
     }
 }
