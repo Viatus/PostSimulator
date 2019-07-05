@@ -20,7 +20,7 @@ public class Machine {
         currentCarriageNumber = 9;
     }
 
-    public Command[] parseCommandsList(String[] listOfCommands) {
+    public static Command[] parseCommandsList(String[] listOfCommands) {
         Command[] parsedCommands = new Command[listOfCommands.length];
         for (String line : listOfCommands) {
             if (!line.matches("\\d+\\. *(([mulrMULR] *\\d*)|([Ss])|([bB] *\\d+ *; *\\d+))")) {
@@ -208,7 +208,7 @@ public class Machine {
         return true;
     }
 
-    public String byteToBinaryString(byte[] tapeToConvert) {
+    public static String byteToBinaryString(byte[] tapeToConvert) {
         StringBuilder result = new StringBuilder();
         for (byte word : tapeToConvert) {
             StringBuilder temp = new StringBuilder();
@@ -227,20 +227,4 @@ public class Machine {
         return result.toString();
     }
 
-
-    public static void main(String[] args) {
-        String[] test = {"1.u", "2.r", "3.b4;2", "4.m", "5.r", "6.b10;7", "7.l", "8.b9;7", "9.r1", "10.s"};
-        Machine machine = new Machine();
-        Command[] testres = machine.parseCommandsList(test);
-        for (Command command : testres) {
-            System.out.println(command);
-        }
-        machine.setProgram(test);
-        byte[] testTape = {0b1010101};
-        machine.setTape(testTape, 0);
-        System.out.println(machine.byteToBinaryString(machine.getTape()));
-        System.out.println(machine.executeProgram());
-        System.out.println(machine.byteToBinaryString(machine.getTape()));
-
-    }
 }

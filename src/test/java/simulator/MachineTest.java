@@ -10,7 +10,7 @@ public class MachineTest {
     public void parseCommandsList() {
         String[] test = {"1.l", "2.b1;3", "3.u", "4.r", "5.b4;6", "6.u", "7.r", "8.b9;1", "9.s"};
         Machine machine = new Machine();
-        Command[] testres = machine.parseCommandsList(test);
+        Command[] testres = Machine.parseCommandsList(test);
         Command[] expectedRes = {new Command(Command.CommandName.left,2), new Command(Command.CommandName.branch, 1,3),
         new Command(Command.CommandName.unmark,4), new Command(Command.CommandName.right, 5),
         new Command(Command.CommandName.branch, 4, 6), new Command(Command.CommandName.unmark, 7),
@@ -19,7 +19,7 @@ public class MachineTest {
         assertArrayEquals(expectedRes, testres);
 
         test = new String[]{"1.    l2", "2. b      3 ; 1", "3.u4", "4.s"};
-        testres = machine.parseCommandsList(test);
+        testres = Machine.parseCommandsList(test);
         expectedRes = new Command[]{new Command(Command.CommandName.left, 2), new Command(Command.CommandName.branch, 3, 1),
         new Command(Command.CommandName.unmark, 4), new Command(Command.CommandName.stop)};
         assertArrayEquals(expectedRes, testres);
@@ -34,14 +34,22 @@ public class MachineTest {
         byte[] testTape = {0b1111011};
         machine.setTape(testTape, 5);
         assertTrue(machine.executeProgram());
-        String expectedTape = "11000000000000";
-        assertEquals(expectedTape, machine.byteToBinaryString(machine.getTape()));
+        String expectedTape = "11";
+        String resultTape = Machine.byteToBinaryString(machine.getTape());
+        resultTape = resultTape.replace('0', ' ');
+        resultTape = resultTape.trim();
+        resultTape = resultTape.replace(' ', '0');
+        assertEquals(expectedTape, resultTape);
 
         //То же задание, но лента задана в виде строки
-        expectedTape = "000000001110000000000";
+        expectedTape = "111";
         assertTrue(machine.setTape("0000000011111011", 14));
         assertTrue(machine.executeProgram());
-        assertEquals(expectedTape, machine.byteToBinaryString(machine.getTape()));
+        resultTape = Machine.byteToBinaryString(machine.getTape());
+        resultTape = resultTape.replace('0', ' ');
+        resultTape = resultTape.trim();
+        resultTape = resultTape.replace(' ', '0');
+        assertEquals(expectedTape, resultTape);
 
         //Прибавление единиы к числу
         testCommands = new String[]{"1.r", "2.b1;3", "3.l", "4.m", "5.s"};
@@ -49,8 +57,12 @@ public class MachineTest {
         testTape = new byte[]{0b0001111};
         machine.setTape(testTape, 0);
         assertTrue(machine.executeProgram());
-        expectedTape = "0011111";
-        assertEquals(expectedTape, machine.byteToBinaryString(machine.getTape()));
+        expectedTape = "11111";
+        resultTape = Machine.byteToBinaryString(machine.getTape());
+        resultTape = resultTape.replace('0', ' ');
+        resultTape = resultTape.trim();
+        resultTape = resultTape.replace(' ', '0');
+        assertEquals(expectedTape, resultTape);
 
         //На ленте задана последовательность массивов, включающая в себя один и более массивов.
         // При этом два соседних массива отделены друг от друга одной пустой ячейкой.
@@ -61,8 +73,12 @@ public class MachineTest {
         testTape = new byte[]{0b1010101};
         machine.setTape(testTape, 0);
         assertTrue(machine.executeProgram());
-        expectedTape = "00001111000000";
-        assertEquals(expectedTape, machine.byteToBinaryString(machine.getTape()));
+        expectedTape = "1111";
+        resultTape = Machine.byteToBinaryString(machine.getTape());
+        resultTape = resultTape.replace('0', ' ');
+        resultTape = resultTape.trim();
+        resultTape = resultTape.replace(' ', '0');
+        assertEquals(expectedTape, resultTape);
     }
 
     @Test
@@ -71,12 +87,12 @@ public class MachineTest {
 
     @Test
     public void byteToBinaryString() {
-        byte[] testArray = {0b1110111, -0b1111111};
-        String expectedResult = "0111011111111111";
-        assertEquals(expectedResult, new Machine().byteToBinaryString(testArray));
+        byte[] testArray = {0b1110111, 0b1111111};
+        String expectedResult = "11101111111111";
+        assertEquals(expectedResult, Machine.byteToBinaryString(testArray));
         testArray[0] = 0b0000000;
         testArray[1] = 0b1010101;
-        expectedResult = "0000000001010101";
-        assertEquals(expectedResult, new Machine().byteToBinaryString(testArray));
+        expectedResult = "00000001010101";
+        assertEquals(expectedResult,Machine.byteToBinaryString(testArray));
     }
 }
