@@ -15,6 +15,18 @@ public class Machine {
         return tape;
     }
 
+    public int getCurrentCarriageNumber() {
+        return currentCarriageNumber;
+    }
+
+    public Command getCurrentCommand() {
+        return commands[currentCommandNumber];
+    }
+
+    public void resetCommands() {
+        currentCommandNumber = 0;
+    }
+
     public Machine() {
         tape = new byte[2];
         currentCarriageNumber = 9;
@@ -133,7 +145,6 @@ public class Machine {
 
     public boolean executeStep() {
         Command command = commands[currentCommandNumber];
-        //System.out.println(command + "    " + byteToBinaryString(tape));
         switch (command.getCommandName()) {
             case mark:
                 return executeMark(command);
@@ -152,6 +163,9 @@ public class Machine {
 
     private boolean executeMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
+        if (wordIndex > tape.length - 1 || wordIndex < 0) {
+            return false;
+        }
         tape[wordIndex] |= (1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
         currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
@@ -159,6 +173,9 @@ public class Machine {
 
     private boolean executeUnMark(Command command) {
         int wordIndex = wordIndex(currentCarriageNumber);
+        if (wordIndex > tape.length - 1 || wordIndex < 0) {
+            return false;
+        }
         tape[wordIndex] &= ~(1 << BITS_PER_WORD - 1 - currentCarriageNumber % BITS_PER_WORD);
         currentCommandNumber = command.getFirstCommandNumber() - 1;
         return true;
