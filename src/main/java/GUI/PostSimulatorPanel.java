@@ -28,7 +28,10 @@ public class PostSimulatorPanel extends JPanel {
 
     private JButton[] tape = new JButton[15];
 
-    private JButton moveTapeLeft, moveTapeRight, start, pause, reset, loadProgram, saveTape, revertTape, speed, doStep;
+    private JButton moveTapeLeft, moveTapeRight, start, pause, reset, loadProgram, saveTape, revertTape, speed, doStep,
+            chooseProgramFile, chooseTapeFile, saveTapeFile;
+
+    private JFileChooser programFile, tapeFile;
 
     private JTextArea programText;
 
@@ -45,6 +48,9 @@ public class PostSimulatorPanel extends JPanel {
         revertTape.addActionListener(e -> onRevertTapePressed());
         speed.addActionListener(e -> onSpeedPressed());
         doStep.addActionListener(e -> onDoStepPressed());
+        chooseTapeFile.addActionListener(e -> onChooseTapeFilePressed());
+        chooseProgramFile.addActionListener(e -> onChooseProgramFilePressed());
+        saveTapeFile.addActionListener(e -> onSaveTapeFilePressed());
     }
 
     private void onMoveTapeLeftPressed() {
@@ -67,6 +73,9 @@ public class PostSimulatorPanel extends JPanel {
     }
 
     private void onStartPressed() {
+        for (JButton button : tape) {
+            button.setEnabled(false);
+        }
         machine.setTape(currentTape, currentCarriagePos);
         tapeBeforeStart = currentTape;
         carriagePosBeforeStart = currentCarriagePos;
@@ -87,6 +96,9 @@ public class PostSimulatorPanel extends JPanel {
                 start.setEnabled(true);
                 machine.resetCommands();
                 pause.setEnabled(false);
+                for (JButton button : tape) {
+                    button.setEnabled(true);
+                }
             }
         });
         simulatorExec.start();
@@ -100,6 +112,12 @@ public class PostSimulatorPanel extends JPanel {
         currentCarriagePos = carriagePosBeforeStart;
         updateTape();
         start.setEnabled(true);
+        reset.setEnabled(false);
+        pause.setText("pause");
+        pause.setEnabled(false);
+        for (JButton button : tape) {
+            button.setEnabled(true);
+        }
     }
 
     private void onPausePressed() {
@@ -161,6 +179,11 @@ public class PostSimulatorPanel extends JPanel {
     }
 
     private void onDoStepPressed() {
+        if (tape[0].isEnabled()) {
+            for (JButton button : tape) {
+                button.setEnabled(false);
+            }
+        }
         machine.setTape(currentTape, currentCarriagePos);
         if (!machine.executeStep()) {
             start.setEnabled(true);
@@ -171,6 +194,18 @@ public class PostSimulatorPanel extends JPanel {
         currentCarriagePos = machine.getCurrentCarriageNumber();
         updateTape();
         currentCommand.setText(machine.getCurrentCommand().toString());
+    }
+
+    private void onChooseTapeFilePressed() {
+
+    }
+
+    private void onChooseProgramFilePressed() {
+
+    }
+
+    private void onSaveTapeFilePressed() {
+
     }
 
     private void updateTape() {
@@ -263,16 +298,29 @@ public class PostSimulatorPanel extends JPanel {
         add(moveTapeRight, gridBagConstraints);
 
         programText = new JTextArea();
-        gridBagConstraints.gridx = 1;
+        gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 3;
-        gridBagConstraints.gridwidth = 15;
-        gridBagConstraints.gridheight = 4;
+        gridBagConstraints.gridwidth = 13;
+        gridBagConstraints.gridheight = 1;
         add(programText, gridBagConstraints);
+        gridBagConstraints.gridheight = 1;
         currentCommand = new JTextField("");
         currentCommand.setFocusable(false);
-        gridBagConstraints.gridwidth = 1;
-        gridBagConstraints.gridx = 16;
+        gridBagConstraints.gridwidth = 2;
+        gridBagConstraints.gridx = 15;
         add(currentCommand, gridBagConstraints);
+
+        chooseProgramFile = new JButton("Choose program from file");
+        chooseTapeFile = new JButton("Choose tape from file");
+        saveTapeFile = new JButton("Save tape to file");
+
+        gridBagConstraints.gridx = 0;
+        add(chooseProgramFile, gridBagConstraints);
+        gridBagConstraints.gridy = 4;
+        add(chooseTapeFile, gridBagConstraints);
+        gridBagConstraints.gridx = 15;
+        add(saveTapeFile, gridBagConstraints);
+
 
         initListeners();
 
