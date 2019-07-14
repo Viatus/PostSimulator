@@ -32,10 +32,14 @@ public class Machine {
         currentCarriageNumber = 9;
     }
 
+    public static Command[] parseCommandsList(String commands) {
+        return parseCommandsList(commands.split("[ \r\n]*;[ \r\n]*"));
+    }
+
     public static Command[] parseCommandsList(String[] listOfCommands) {
         Command[] parsedCommands = new Command[listOfCommands.length];
         for (String line : listOfCommands) {
-            if (!line.matches("\\d+\\. *(([mulrMULR] *\\d*)|([Ss])|([bB] *\\d+ *; *\\d+))")) {
+            if (!line.matches("\\d+\\. *(([mulrMULR] *\\d*)|([Ss])|([bB] *\\d+ *, *\\d+))")) {
                 throw new IllegalArgumentException("Wrong command structure");
             }
 
@@ -84,7 +88,7 @@ public class Machine {
                     }
                     break;
                 case 'b':
-                    String[] parts = line.split("[ ;]+");
+                    String[] parts = line.split("[ ,]+");
                     command = new Command(Command.CommandName.branch, Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
                     break;
                 default:
@@ -97,6 +101,11 @@ public class Machine {
     }
 
     public void setProgram(String[] listOfCommands) {
+        commands = parseCommandsList(listOfCommands);
+        currentCommandNumber = 0;
+    }
+
+    public void setProgram(String listOfCommands) {
         commands = parseCommandsList(listOfCommands);
         currentCommandNumber = 0;
     }

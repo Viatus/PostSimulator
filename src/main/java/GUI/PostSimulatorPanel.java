@@ -4,9 +4,15 @@ package GUI;
 import simulator.Machine;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 
 
 public class PostSimulatorPanel extends JPanel {
@@ -36,6 +42,8 @@ public class PostSimulatorPanel extends JPanel {
     private JTextArea programText;
 
     private JTextField currentCommand;
+
+    private JFileChooser fc;
 
     private void initListeners() {
         moveTapeLeft.addActionListener(e -> onMoveTapeLeftPressed());
@@ -148,7 +156,12 @@ public class PostSimulatorPanel extends JPanel {
 
 
     private void onLoadProgramPressed() {
-        machine.setProgram(programText.getText().split("\n"));
+        try {
+            machine.setProgram(programText.getText());
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "Program is written incorrectly", "Program set up failed", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         start.setEnabled(true);
         doStep.setEnabled(true);
     }
@@ -197,18 +210,82 @@ public class PostSimulatorPanel extends JPanel {
     }
 
     private void onChooseTapeFilePressed() {
+        int returnVal = fc.showOpenDialog(this);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            StringBuilder tapeFromFile = new StringBuilder();
+            StringBuilder carriagePosFromFile = new StringBuilder("");
+            try (FileReader reader = new FileReader(f)) {
+                int c;
+                do {
+                    c = reader.read();
+                } while (c == ' ' || c == '\n');
 
+                do {
+                    if (!Arrays.asList('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').contains((char) c)) {
+                        JOptionPane.showMessageDialog(this, "Tape file has unacceptable symbols", "Reading failed", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    carriagePosFromFile.append((char) c);
+                    c = reader.read();
+                } while (c != ' ' && c != '\n');
+
+                while ((c = reader.read()) != -1) {
+                    if (c != ' ' && c != '\n' && c != '0' && c != '1' && c != '\r') {
+                        JOptionPane.showMessageDialog(this, "Tape file has unacceptable symbols", "Reading failed", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    if (c != ' ' && c != '\n' && c != '\r') {
+                        tapeFromFile.append((char) c);
+                    }
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "File is incorrect", "Reading failed", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            currentTape = tapeFromFile.toString();
+            currentCarriagePos = Integer.valueOf(carriagePosFromFile.toString());
+            updateTape();
+        }
     }
 
     private void onChooseProgramFilePressed() {
-
+        int returnVal = fc.showOpenDialog(this);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            StringBuilder program = new StringBuilder("");
+            try (FileReader reader = new FileReader(f)) {
+                int c;
+                while ((c = reader.read()) != -1) {
+                    program.append((char) c);
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "File is incorrect", "Reading failed", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            programText.setText(program.toString());
+        }
     }
 
     private void onSaveTapeFilePressed() {
-
+        int returnVal = fc.showSaveDialog(this);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try (FileWriter writer = new FileWriter(f, false)) {
+                writer.write(currentTape + "\n" + currentCarriagePos);
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "File is incorrect", "Writing failed", JOptionPane.WARNING_MESSAGE);
+            }
+        }
     }
 
     private void updateTape() {
+        StringBuilder leftTape = new StringBuilder("");
+        for (int i = currentCarriagePos - BITS_TO_BORDER; i < 0; i++) {
+            leftTape.append("0");
+            currentCarriagePos++;
+        }
+        currentTape = leftTape.append(currentTape).toString();
         for (int i = currentCarriagePos - BITS_TO_BORDER; i < currentCarriagePos + BITS_TO_BORDER + 1; i++) {
             if (i >= currentTape.length()) {
                 currentTape = currentTape + "0";
@@ -330,5 +407,29 @@ public class PostSimulatorPanel extends JPanel {
         machine = new Machine();
 
         sleepDuration = 300;
+
+        fc = new JFileChooser("./");
+        fc.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                if (f.isDirectory()) {
+                    return true;
+                }
+
+                String extension = "";
+
+                int i = f.getName().lastIndexOf('.');
+                if (i > 0) {
+                    extension = f.getName().substring(i + 1);
+                }
+                return extension.equals("txt");
+            }
+
+            @Override
+            public String getDescription() {
+                return ".txt";
+            }
+        });
+        fc.setAcceptAllFileFilterUsed(false);
     }
 }
