@@ -6,8 +6,6 @@ import simulator.Machine;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -35,9 +33,7 @@ public class PostSimulatorPanel extends JPanel {
     private JButton[] tape = new JButton[15];
 
     private JButton moveTapeLeft, moveTapeRight, start, pause, reset, loadProgram, saveTape, revertTape, speed, doStep,
-            chooseProgramFile, chooseTapeFile, saveTapeFile;
-
-    private JFileChooser programFile, tapeFile;
+            chooseProgramFile, chooseTapeFile, saveTapeFile, saveProgramFile, help;
 
     private JTextArea programText;
 
@@ -59,6 +55,8 @@ public class PostSimulatorPanel extends JPanel {
         chooseTapeFile.addActionListener(e -> onChooseTapeFilePressed());
         chooseProgramFile.addActionListener(e -> onChooseProgramFilePressed());
         saveTapeFile.addActionListener(e -> onSaveTapeFilePressed());
+        saveProgramFile.addActionListener(e -> onSaveProgramFilePressed());
+        help.addActionListener(e -> onHelpPressed());
     }
 
     private void onMoveTapeLeftPressed() {
@@ -87,9 +85,9 @@ public class PostSimulatorPanel extends JPanel {
         machine.setTape(currentTape, currentCarriagePos);
         tapeBeforeStart = currentTape;
         carriagePosBeforeStart = currentCarriagePos;
-        simulatorExec = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        currentCommand.setText(machine.getCurrentCommand().toString());
+        simulatorExec = new Thread(() -> {
+            try {
                 while (machine.executeStep()) {
                     try {
                         Thread.sleep(sleepDuration);
@@ -101,12 +99,14 @@ public class PostSimulatorPanel extends JPanel {
                     updateTape();
                     currentCommand.setText(machine.getCurrentCommand().toString());
                 }
-                start.setEnabled(true);
-                machine.resetCommands();
-                pause.setEnabled(false);
-                for (JButton button : tape) {
-                    button.setEnabled(true);
-                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "During execution something gone wrong", "Program execution failed", JOptionPane.WARNING_MESSAGE);
+            }
+            start.setEnabled(true);
+            machine.resetCommands();
+            pause.setEnabled(false);
+            for (JButton button : tape) {
+                button.setEnabled(true);
             }
         });
         simulatorExec.start();
@@ -174,19 +174,19 @@ public class PostSimulatorPanel extends JPanel {
         }
         switch (sleepDuration) {
             case 100:
-                speed.setText("Speed:\nVery fast");
+                speed.setText("speed:\nVery fast");
                 break;
             case 200:
-                speed.setText("Speed:\nFast");
+                speed.setText("speed:\nFast");
                 break;
             case 300:
-                speed.setText("Speed:\nNormal");
+                speed.setText("speed:\nNormal");
                 break;
             case 400:
-                speed.setText("Speed:\nSlow");
+                speed.setText("speed:\nSlow");
                 break;
             case 500:
-                speed.setText("Speed:\nVery slow");
+                speed.setText("speed:\nVery slow");
                 break;
         }
     }
@@ -279,6 +279,26 @@ public class PostSimulatorPanel extends JPanel {
         }
     }
 
+    private void onSaveProgramFilePressed() {
+        int returnVal = fc.showSaveDialog(this);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try (FileWriter writer = new FileWriter(f, false)) {
+                writer.write(programText.getText());
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "File is incorrect", "Writing failed", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }
+
+    private void onHelpPressed() {
+        JOptionPane.showMessageDialog(this, "To execute program you need to:\n1)Input program either through text field or file;\n2)Press load program button;\n" +
+                "3)Input tape either from file or through interface;\n4)Press start or execute one command button.\n\n\n" +
+                "Rules for commands:\n1)Possible commands: u - unmark, m - mark, l - left, r - right, s - stop, b - branch;\n" +
+                "2)Each command begins with its number: 1.u, 2.r2\n3)number of next command should be stated after command, if it is not stated, then next command will be command with next number after current.\n" +
+                "For branch command numbers are mandatory and are separated with ',': b1,3;\n4)Commands must be separated by ';'.", "help", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void updateTape() {
         StringBuilder leftTape = new StringBuilder("");
         for (int i = currentCarriagePos - BITS_TO_BORDER; i < 0; i++) {
@@ -325,18 +345,20 @@ public class PostSimulatorPanel extends JPanel {
         pause.setEnabled(false);
         reset = new JButton("reset");
         reset.setEnabled(false);
-        speed = new JButton("Speed:\nNormal");
-        doStep = new JButton("Execute one command");
+        speed = new JButton("speed:\nNormal");
+        doStep = new JButton("execute one command");
         doStep.setEnabled(false);
-        loadProgram = new JButton("load Program");
+        loadProgram = new JButton("load program");
         add(start, gridBagConstraints);
         gridBagConstraints.gridx = 4;
         add(pause, gridBagConstraints);
-        gridBagConstraints.gridx = 7;
+        gridBagConstraints.gridx = 10;
+        gridBagConstraints.gridy = 0;
         add(reset, gridBagConstraints);
+        gridBagConstraints.gridy = 1;
         gridBagConstraints.gridx = 10;
         add(loadProgram, gridBagConstraints);
-        saveTape = new JButton("Save tape");
+        saveTape = new JButton("fix tape");
         gridBagConstraints.gridx = 13;
         add(saveTape, gridBagConstraints);
         revertTape = new JButton("revert tape");
@@ -349,25 +371,25 @@ public class PostSimulatorPanel extends JPanel {
         add(speed, gridBagConstraints);
         gridBagConstraints.gridwidth = 1;
         gridBagConstraints.gridx = 0;
-        moveTapeLeft = new JButton("Left");
-        moveTapeRight = new JButton("Right");
+        moveTapeLeft = new JButton("left");
+        moveTapeRight = new JButton("right");
         gridBagConstraints.gridy = 2;
         add(moveTapeLeft, gridBagConstraints);
         gridBagConstraints.gridx = 1;
         for (int i = 0; i < BITS_TO_BORDER * 2 + 1; i++) {
             tape[i] = new JButton("0");
+            if (i == 7) {
+                tape[i].setBackground(Color.cyan);
+            }
             tape[i].setHorizontalAlignment(SwingConstants.CENTER);
-            tape[i].addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    JButton button = (JButton) e.getSource();
-                    if (button.getText().equals("0")) {
-                        button.setText("1");
-                    } else {
-                        button.setText("0");
-                    }
-                    updateCurrentTape();
+            tape[i].addActionListener(e -> {
+                JButton button = (JButton) e.getSource();
+                if (button.getText().equals("0")) {
+                    button.setText("1");
+                } else {
+                    button.setText("0");
                 }
+                updateCurrentTape();
             });
             add(tape[i], gridBagConstraints);
             gridBagConstraints.gridx++;
@@ -378,26 +400,42 @@ public class PostSimulatorPanel extends JPanel {
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 3;
         gridBagConstraints.gridwidth = 13;
-        gridBagConstraints.gridheight = 1;
-        add(programText, gridBagConstraints);
+        gridBagConstraints.gridheight = 2;
+        gridBagConstraints.fill = GridBagConstraints.BOTH;
+        add(new JScrollPane(programText), gridBagConstraints);
+        gridBagConstraints.fill = GridBagConstraints.HORIZONTAL;
         gridBagConstraints.gridheight = 1;
         currentCommand = new JTextField("");
         currentCommand.setFocusable(false);
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.gridx = 15;
+        currentCommand.setHorizontalAlignment(SwingConstants.CENTER);
+        gridBagConstraints.gridwidth = 3;
+        gridBagConstraints.gridx = 7;
+        gridBagConstraints.gridy = 1;
         add(currentCommand, gridBagConstraints);
 
         chooseProgramFile = new JButton("Choose program from file");
         chooseTapeFile = new JButton("Choose tape from file");
         saveTapeFile = new JButton("Save tape to file");
+        saveProgramFile = new JButton("Save program to file");
 
+
+        gridBagConstraints.gridy = 3;
+        gridBagConstraints.gridwidth = 2;
         gridBagConstraints.gridx = 0;
         add(chooseProgramFile, gridBagConstraints);
+        gridBagConstraints.gridx = 15;
+        add(saveProgramFile, gridBagConstraints);
+        gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 4;
         add(chooseTapeFile, gridBagConstraints);
         gridBagConstraints.gridx = 15;
         add(saveTapeFile, gridBagConstraints);
 
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridx = 16;
+        gridBagConstraints.gridwidth = 1;
+        help = new JButton("help");
+        add(help, gridBagConstraints);
 
         initListeners();
 

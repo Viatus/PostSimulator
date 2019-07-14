@@ -10,7 +10,6 @@ public class PostSimulatorFrame extends JFrame {
 
     private void initMainPanel() {
         postSimulatorPanel = new PostSimulatorPanel();
-
     }
 
     private void initListeners() {
@@ -48,6 +47,5 @@ public class PostSimulatorFrame extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new PostSimulatorFrame("Post machine simulator"));
     }
-
 
 }

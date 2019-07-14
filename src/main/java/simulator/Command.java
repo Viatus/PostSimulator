@@ -78,6 +78,6 @@ public class Command {
 
     @Override
     public String toString() {
-        return commandName.toString() + (firstCommandNumber != 0? firstCommandNumber:"") + (secondCommandNumber != 0? ";" + secondCommandNumber:"");
+        return commandName.toString() + (firstCommandNumber != 0? firstCommandNumber:"") + (secondCommandNumber != 0? "," + secondCommandNumber:"");
     }
 }

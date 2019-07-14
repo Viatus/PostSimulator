@@ -9,7 +9,6 @@ public class MachineTest {
     @Test
     public void parseCommandsList() {
         String[] test = {"1.l", "2.b1,3", "3.u", "4.r", "5.b4,6", "6.u", "7.r", "8.b9,1", "9.s"};
-        Machine machine = new Machine();
         Command[] testres = Machine.parseCommandsList(test);
         Command[] expectedRes = {new Command(Command.CommandName.left,2), new Command(Command.CommandName.branch, 1,3),
         new Command(Command.CommandName.unmark,4), new Command(Command.CommandName.right, 5),
